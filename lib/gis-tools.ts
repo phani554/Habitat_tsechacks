@@ -189,7 +189,8 @@ export async function fetchSentinelData(
   }
 }
 
-// OpenWeather API - Get climate data
+// OpenWeather API - Get climate data with forecast
+// Note: For simple weather data, use fetchWeatherData from '@/lib/services/weather' instead
 export async function fetchWeatherData(
   lat: number,
   lng: number
@@ -204,7 +205,7 @@ export async function fetchWeatherData(
   const apiKey = process.env.OPENWEATHER_API_KEY
 
   if (!apiKey) {
-    console.warn('OpenWeather API key not configured, using mock data')
+    // Return fallback data silently - detailed logging handled elsewhere
     return {
       temperature: 28,
       humidity: 65,
