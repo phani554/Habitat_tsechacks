@@ -18,9 +18,6 @@ export const env = {
   // Global Forest Watch
   gfwApiKey: process.env.GFW_API_KEY || '',
   
-  // Mapbox
-  mapboxAccessToken: process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || process.env.MAPBOX_ACCESS_TOKEN || '',
-  
   // NASA Earthdata
   ndviToken: process.env.NDVI_TOKEN || '',
   nasaUsername: process.env.NASA_EARTHDATA_USERNAME || '',

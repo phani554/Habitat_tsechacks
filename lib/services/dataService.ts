@@ -66,21 +66,7 @@ export interface RestorationData {
 
 export async function fetchCoordinates(location: string): Promise<Coordinates> {
   try {
-    // Try Mapbox first if token exists
-    const mapboxToken = process.env.MAPBOX_ACCESS_TOKEN;
-    if (mapboxToken) {
-      const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(location)}.json?access_token=${mapboxToken}&limit=1`;
-      const response = await fetch(url);
-      if (response.ok) {
-        const data = await response.json();
-        if (data.features && data.features.length > 0) {
-          const [lon, lat] = data.features[0].center;
-          return { lat, lon };
-        }
-      }
-    }
-
-    // Fallback to Nominatim (Free)
+    // Use Nominatim (Free, no API key required)
     const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(location)}&format=json&limit=1`;
     const response = await fetch(url, {
       headers: { 'User-Agent': 'ForestRestorationPlatform/1.0' }

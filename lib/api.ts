@@ -116,11 +116,18 @@ export interface ForestAreaData {
   }
 }
 
+export interface DataSourceSummary {
+  usingRealData: string[]
+  usingMockData: string[]
+  message: string
+}
+
 export interface MonitoringDataResponse {
   metrics: Metrics
   history: HistoryEntry[]
   alerts: Alert[]
   forestAreas?: ForestAreaData[]
+  dataSources?: DataSourceSummary
 }
 
 export async function getMonitoringData(
@@ -311,4 +318,25 @@ export async function getSatelliteData(
     method: 'POST',
     body: JSON.stringify(params),
   })
+}
+
+// ============================================
+// SERVICE STATUS API
+// ============================================
+
+export interface ServiceStatusResponse {
+  status: 'ok' | 'error'
+  services: {
+    openWeather: { name: string; configured: boolean }
+    globalForestWatch: { name: string; configured: boolean }
+    sentinelHub: { name: string; configured: boolean }
+    soilGrids: { name: string; configured: boolean }
+    gbif: { name: string; configured: boolean }
+  }
+  summary: DataSourceSummary
+  timestamp: string
+}
+
+export async function getServiceStatus(): Promise<ServiceStatusResponse> {
+  return apiRequest<ServiceStatusResponse>('/api/status')
 }

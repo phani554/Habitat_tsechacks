@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchDeforestationAlerts } from '@/lib/gis-tools'
 import { fetchWeatherData as fetchWeatherService } from '@/lib/services/weather'
+import { getDataSourceSummary } from '@/lib/services/serviceStatus'
 
 const BACKEND_URL = process.env.BACKEND_URL
 
@@ -145,11 +146,15 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Get data source summary
+    const dataSourceSummary = getDataSourceSummary()
+    
     const response = {
       metrics,
       history: generateHistoryData(),
       alerts: generateAlerts(deforestationData, weatherData),
       ...(forestAreas && { forestAreas }),
+      dataSources: dataSourceSummary,
     }
 
     return NextResponse.json(response)

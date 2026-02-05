@@ -19,6 +19,8 @@ import {
   Target,
   Scan,
   Bot,
+  Database,
+  CloudOff,
 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
@@ -37,7 +39,7 @@ import { PredictionPanel } from '@/components/habitat/prediction-panel'
 import { ForestLoader } from '@/components/habitat/forest-loader'
 import { AIChat } from '@/components/habitat/ai-chat'
 import { ForestAreaCard } from '@/components/habitat/forest-area-card'
-import { analyzeSector as analyzeSectorApi, getMonitoringData, getPredictions, type ForestAreaData } from '@/lib/api'
+import { analyzeSector as analyzeSectorApi, getMonitoringData, getPredictions, type ForestAreaData, type DataSourceSummary } from '@/lib/api'
 import type { ApiResponse, Species } from '@/lib/types'
 import type { AfforestationSite } from '@/components/habitat/map-canvas'
 import { cn } from '@/lib/utils'
@@ -136,6 +138,9 @@ export default function HabitatDashboard() {
   // Forest areas state for monitoring
   const [forestAreas, setForestAreas] = useState<ForestAreaData[]>([])
   const [selectedForest, setSelectedForest] = useState<string | null>(null)
+  
+  // Data sources state
+  const [dataSources, setDataSources] = useState<DataSourceSummary | null>(null)
 
   // Fetch predictions
   const fetchPredictions = useCallback(async () => {
@@ -187,6 +192,11 @@ export default function HabitatDashboard() {
         if (!selectedForest && monitoringData.forestAreas.length > 0) {
           setSelectedForest(monitoringData.forestAreas[0].id)
         }
+      }
+      
+      // Store data sources info
+      if (monitoringData.dataSources) {
+        setDataSources(monitoringData.dataSources)
       }
     } catch (error) {
       console.error('Failed to fetch monitoring data:', error)
@@ -679,6 +689,27 @@ export default function HabitatDashboard() {
             {/* Left Panel - Forest Areas & Metrics */}
             <div className="flex-1 overflow-y-auto p-4 lg:w-[50%]">
               <div className="space-y-4">
+                {/* Data Sources Status */}
+                {dataSources && (
+                  <div className="rounded-lg border border-border/50 bg-card/30 p-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">{dataSources.message}</span>
+                      <div className="flex gap-1">
+                        {dataSources.usingRealData.length > 0 && (
+                          <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-500 border-emerald-500/20">
+                            {dataSources.usingRealData.length} Live
+                          </Badge>
+                        )}
+                        {dataSources.usingMockData.length > 0 && (
+                          <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-500 border-amber-500/20">
+                            {dataSources.usingMockData.length} Mock
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Forest Areas Section */}
                 {forestAreas.length > 0 && (
                   <div>
