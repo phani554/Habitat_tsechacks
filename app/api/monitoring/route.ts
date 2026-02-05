@@ -30,13 +30,11 @@ const MONITORED_FORESTS = [
 ]
 
 export async function GET(request: NextRequest) {
-  console.log('[v0] Monitoring API GET called')
   try {
     const { searchParams } = new URL(request.url)
     const lat = parseFloat(searchParams.get('lat') || '20.5937')
     const lng = parseFloat(searchParams.get('lng') || '78.9629')
     const includeForestAreas = searchParams.get('includeForestAreas') === 'true'
-    console.log('[v0] Params:', { lat, lng, includeForestAreas })
 
     // If external backend URL is configured, proxy the request
     if (BACKEND_URL) {
