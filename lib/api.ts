@@ -91,19 +91,44 @@ export async function analyzeSector(
 export interface MonitoringDataRequest {
   lat: number
   lng: number
+  includeForestAreas?: boolean
+}
+
+export interface ForestAreaData {
+  id: string
+  name: string
+  region: string
+  coordinates: { lat: number; lng: number }
+  metrics: {
+    health_score: number
+    ndvi_current: number
+    forest_cover: number
+    carbon_sequestration: number
+    temperature: number
+    humidity: number
+    rainfall: number
+  }
+  history: HistoryEntry[]
+  trend: {
+    direction: 'up' | 'down' | 'stable'
+    percentage: number
+    description: string
+  }
 }
 
 export interface MonitoringDataResponse {
   metrics: Metrics
   history: HistoryEntry[]
   alerts: Alert[]
+  forestAreas?: ForestAreaData[]
 }
 
 export async function getMonitoringData(
   params: MonitoringDataRequest
 ): Promise<MonitoringDataResponse> {
+  const includeForestAreas = params.includeForestAreas ? '&includeForestAreas=true' : ''
   return apiRequest<MonitoringDataResponse>(
-    `/api/monitoring?lat=${params.lat}&lng=${params.lng}`
+    `/api/monitoring?lat=${params.lat}&lng=${params.lng}${includeForestAreas}`
   )
 }
 

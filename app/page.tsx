@@ -36,7 +36,8 @@ import { CalamitySimulator } from '@/components/habitat/calamity-simulator'
 import { PredictionPanel } from '@/components/habitat/prediction-panel'
 import { ForestLoader } from '@/components/habitat/forest-loader'
 import { AIChat } from '@/components/habitat/ai-chat'
-import { analyzeSector as analyzeSectorApi, getMonitoringData, getPredictions } from '@/lib/api'
+import { ForestAreaCard } from '@/components/habitat/forest-area-card'
+import { analyzeSector as analyzeSectorApi, getMonitoringData, getPredictions, type ForestAreaData } from '@/lib/api'
 import type { ApiResponse, Species } from '@/lib/types'
 import type { AfforestationSite } from '@/components/habitat/map-canvas'
 import { cn } from '@/lib/utils'
@@ -131,6 +132,10 @@ export default function HabitatDashboard() {
   const [selectedSpecies, setSelectedSpecies] = useState<Species[]>([])
   const [predictionData, setPredictionData] = useState<any>(null)
   const [isPredictionLoading, setIsPredictionLoading] = useState(false)
+  
+  // Forest areas state for monitoring
+  const [forestAreas, setForestAreas] = useState<ForestAreaData[]>([])
+  const [selectedForest, setSelectedForest] = useState<string | null>(null)
 
   // Fetch predictions
   const fetchPredictions = useCallback(async () => {
@@ -150,12 +155,13 @@ export default function HabitatDashboard() {
   }, [lat, lng, selectedSpecies])
 
   // Fetch monitoring data from API
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (includeForests = false) => {
     setIsLoading(true)
     try {
       const monitoringData = await getMonitoringData({
         lat: parseFloat(lat) || 20.5937,
         lng: parseFloat(lng) || 78.9629,
+        includeForestAreas: includeForests,
       })
       setData({
         status: 'success',
@@ -174,6 +180,14 @@ export default function HabitatDashboard() {
           texture: 'Unknown',
         },
       })
+      
+      // Store forest areas if available
+      if (monitoringData.forestAreas) {
+        setForestAreas(monitoringData.forestAreas)
+        if (!selectedForest && monitoringData.forestAreas.length > 0) {
+          setSelectedForest(monitoringData.forestAreas[0].id)
+        }
+      }
     } catch (error) {
       console.error('Failed to fetch monitoring data:', error)
       // Fallback to default data
@@ -187,7 +201,7 @@ export default function HabitatDashboard() {
       })
     }
     setIsLoading(false)
-  }, [lat, lng])
+  }, [lat, lng, selectedForest])
 
   // Analyze sector (full heatmap analysis) using API
   const analyzeSector = useCallback(async () => {
@@ -223,7 +237,7 @@ export default function HabitatDashboard() {
 
   // Initial data fetch
   useEffect(() => {
-    fetchData()
+    fetchData(true) // Include forest areas on initial load
   }, [])
 
   // Fetch predictions when entering prediction phase
@@ -662,13 +676,36 @@ export default function HabitatDashboard() {
         {/* Monitoring Phase */}
         {activePhase === 'monitoring' && (
           <div className="flex h-[calc(100vh-4rem)] flex-col lg:flex-row">
-            {/* Metrics Overview */}
+            {/* Left Panel - Forest Areas & Metrics */}
             <div className="flex-1 overflow-y-auto p-4 lg:w-[50%]">
               <div className="space-y-4">
+                {/* Forest Areas Section */}
+                {forestAreas.length > 0 && (
+                  <div>
+                    <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+                      <TreeDeciduous className="h-4 w-4 text-primary" />
+                      Monitored Forest Areas
+                    </h3>
+                    <div className="grid gap-3">
+                      {forestAreas.map((forest) => (
+                        <ForestAreaCard
+                          key={forest.id}
+                          forest={forest}
+                          isSelected={selectedForest === forest.id}
+                          onClick={() => setSelectedForest(forest.id)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Health Score */}
                 <div className="rounded-xl border border-border/50 bg-card/30 p-4">
                   <HealthGauge
-                    score={data?.metrics.health_score ?? 0}
+                    score={selectedForest 
+                      ? forestAreas.find(f => f.id === selectedForest)?.metrics.health_score ?? 0
+                      : data?.metrics.health_score ?? 0
+                    }
                     isLoading={isLoading}
                   />
                 </div>
@@ -677,18 +714,31 @@ export default function HabitatDashboard() {
                 <div className="grid grid-cols-2 gap-3">
                   <MetricCard
                     title="NDVI Index"
-                    value={data?.metrics.ndvi_current.toFixed(2) ?? '0'}
+                    value={selectedForest 
+                      ? forestAreas.find(f => f.id === selectedForest)?.metrics.ndvi_current.toFixed(2) ?? '0'
+                      : data?.metrics.ndvi_current.toFixed(2) ?? '0'
+                    }
                     icon={Leaf}
                     isLoading={isLoading}
                     status={
-                      (data?.metrics.ndvi_current ?? 0) > 0.5
+                      ((selectedForest 
+                        ? forestAreas.find(f => f.id === selectedForest)?.metrics.ndvi_current
+                        : data?.metrics.ndvi_current) ?? 0) > 0.5
                         ? 'healthy'
-                        : (data?.metrics.ndvi_current ?? 0) > 0.3
+                        : ((selectedForest 
+                            ? forestAreas.find(f => f.id === selectedForest)?.metrics.ndvi_current
+                            : data?.metrics.ndvi_current) ?? 0) > 0.3
                           ? 'warning'
                           : 'critical'
                     }
-                    trend="up"
-                    trendValue="+8%"
+                    trend={selectedForest 
+                      ? forestAreas.find(f => f.id === selectedForest)?.trend.direction === 'up' ? 'up' : 'down'
+                      : 'up'
+                    }
+                    trendValue={selectedForest 
+                      ? `${forestAreas.find(f => f.id === selectedForest)?.trend.direction === 'up' ? '+' : '-'}${forestAreas.find(f => f.id === selectedForest)?.trend.percentage}%`
+                      : '+8%'
+                    }
                   />
                   <MetricCard
                     title="Soil pH"
@@ -704,28 +754,42 @@ export default function HabitatDashboard() {
                   />
                   <MetricCard
                     title="Temperature"
-                    value={data?.metrics.lst_temp ?? '0'}
+                    value={selectedForest 
+                      ? forestAreas.find(f => f.id === selectedForest)?.metrics.temperature ?? '0'
+                      : data?.metrics.lst_temp ?? '0'
+                    }
                     unit="°C"
                     icon={Thermometer}
                     isLoading={isLoading}
                     status={
-                      (data?.metrics.lst_temp ?? 0) < 35
+                      ((selectedForest 
+                        ? forestAreas.find(f => f.id === selectedForest)?.metrics.temperature
+                        : data?.metrics.lst_temp) ?? 0) < 35
                         ? 'healthy'
-                        : (data?.metrics.lst_temp ?? 0) < 40
+                        : ((selectedForest 
+                            ? forestAreas.find(f => f.id === selectedForest)?.metrics.temperature
+                            : data?.metrics.lst_temp) ?? 0) < 40
                           ? 'warning'
                           : 'critical'
                     }
                   />
                   <MetricCard
                     title="Moisture"
-                    value={data?.metrics.moisture_index ?? '0'}
+                    value={selectedForest 
+                      ? forestAreas.find(f => f.id === selectedForest)?.metrics.humidity ?? '0'
+                      : data?.metrics.moisture_index ?? '0'
+                    }
                     unit="%"
                     icon={Droplets}
                     isLoading={isLoading}
                     status={
-                      (data?.metrics.moisture_index ?? 0) > 40
+                      ((selectedForest 
+                        ? forestAreas.find(f => f.id === selectedForest)?.metrics.humidity
+                        : data?.metrics.moisture_index) ?? 0) > 40
                         ? 'healthy'
-                        : (data?.metrics.moisture_index ?? 0) > 20
+                        : ((selectedForest 
+                            ? forestAreas.find(f => f.id === selectedForest)?.metrics.humidity
+                            : data?.metrics.moisture_index) ?? 0) > 20
                           ? 'warning'
                           : 'critical'
                     }
@@ -749,19 +813,27 @@ export default function HabitatDashboard() {
                   />
                   <MetricCard
                     title="Forest Cover"
-                    value={data?.metrics.forest_cover ?? '0'}
+                    value={selectedForest 
+                      ? forestAreas.find(f => f.id === selectedForest)?.metrics.forest_cover.toFixed(1) ?? '0'
+                      : data?.metrics.forest_cover ?? '0'
+                    }
                     unit="%"
                     icon={TreeDeciduous}
                     isLoading={isLoading}
                     status={
-                      (data?.metrics.forest_cover ?? 0) > 33
+                      ((selectedForest 
+                        ? forestAreas.find(f => f.id === selectedForest)?.metrics.forest_cover
+                        : data?.metrics.forest_cover) ?? 0) > 33
                         ? 'healthy'
                         : 'warning'
                     }
                   />
                   <MetricCard
                     title="Carbon Seq."
-                    value={data?.metrics.carbon_sequestration ?? '0'}
+                    value={selectedForest 
+                      ? forestAreas.find(f => f.id === selectedForest)?.metrics.carbon_sequestration ?? '0'
+                      : data?.metrics.carbon_sequestration ?? '0'
+                    }
                     unit="t/ha"
                     icon={Activity}
                     isLoading={isLoading}
@@ -783,13 +855,22 @@ export default function HabitatDashboard() {
               </div>
             </div>
 
-            {/* Trends Panel */}
+            {/* Right Panel - Trends */}
             <div className="flex-1 overflow-y-auto border-l border-border/50 p-4 lg:w-[50%]">
               <div className="rounded-xl border border-border/50 bg-card/30 p-4">
                 <h3 className="mb-4 text-sm font-semibold text-foreground">
-                  Historical Trends (12 Months)
+                  {selectedForest 
+                    ? `${forestAreas.find(f => f.id === selectedForest)?.name} - Historical Trends`
+                    : 'Historical Trends (12 Months)'
+                  }
                 </h3>
-                <TrendsChart data={data?.history ?? []} isLoading={isLoading} />
+                <TrendsChart 
+                  data={selectedForest 
+                    ? forestAreas.find(f => f.id === selectedForest)?.history ?? []
+                    : data?.history ?? []
+                  } 
+                  isLoading={isLoading} 
+                />
               </div>
             </div>
           </div>

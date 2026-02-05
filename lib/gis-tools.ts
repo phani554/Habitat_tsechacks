@@ -1,5 +1,8 @@
 'use server'
 
+// Re-export weather service for backwards compatibility
+export { fetchWeatherData as fetchWeatherDataService } from '@/lib/services/weather'
+
 // Sentinel Hub Authentication
 async function getSentinelToken(): Promise<string | null> {
   const clientId = process.env.SENTINELHUB_CLIENT_ID
