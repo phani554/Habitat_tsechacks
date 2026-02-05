@@ -1,5 +1,3 @@
-'use server'
-
 // Re-export weather service for backwards compatibility
 export { fetchWeatherData as fetchWeatherDataService } from '@/lib/services/weather'
 

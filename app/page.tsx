@@ -159,13 +159,16 @@ export default function HabitatDashboard() {
 
   // Fetch monitoring data from API
   const fetchData = useCallback(async (includeForests = false) => {
+    console.log('[v0] fetchData called, includeForests:', includeForests)
     setIsLoading(true)
     try {
+      console.log('[v0] Calling getMonitoringData...')
       const monitoringData = await getMonitoringData({
         lat: parseFloat(lat) || 20.5937,
         lng: parseFloat(lng) || 78.9629,
         includeForestAreas: includeForests,
       })
+      console.log('[v0] monitoringData received:', monitoringData)
       setData({
         status: 'success',
         coordinates: {
@@ -197,7 +200,8 @@ export default function HabitatDashboard() {
         setDataSources(monitoringData.dataSources)
       }
     } catch (error) {
-      console.error('Failed to fetch monitoring data:', error)
+      console.error('[v0] Failed to fetch monitoring data:', error)
+      console.log('[v0] Falling back to mock data')
       // Fallback to default data
       setData({
         status: 'success',
@@ -243,9 +247,11 @@ export default function HabitatDashboard() {
     setDetectedSites(sites)
   }, [])
 
-  // Initial data fetch
+  // Initial data fetch - only run once on mount
   useEffect(() => {
+    console.log('[v0] Initial data fetch useEffect running')
     fetchData(true) // Include forest areas on initial load
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Fetch predictions when entering prediction phase
